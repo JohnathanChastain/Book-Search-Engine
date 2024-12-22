@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Container, Card, Button, Row, Col } from 'react-bootstrap';
+import { useMutation } from '@apollo/client';
 
 import { getMe, deleteBook } from '../utils/API';
 import Auth from '../utils/auth';
 import { removeBookId } from '../utils/localStorage';
 import type { User } from '../models/User';
+import { SAVE_BOOK } from '../utils/mutations';
 
 const SavedBooks = () => {
   const [userData, setUserData] = useState<User>({
@@ -13,6 +15,8 @@ const SavedBooks = () => {
     password: '',
     savedBooks: [],
   });
+
+  const [saveBook] = useMutation(SAVE_BOOK);
 
   // use this to determine if `useEffect()` hook needs to run again
   const userDataLength = Object.keys(userData).length;
@@ -61,6 +65,28 @@ const SavedBooks = () => {
       setUserData(updatedUser);
       // upon success, remove book's id from localStorage
       removeBookId(bookId);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // create function that accepts the book's mongo _id value as param and saves the book to the database
+  const handleSaveBook = async (bookId: string) => {
+    const token = Auth.loggedIn() ? Auth.getToken() : null;
+
+    if (!token) {
+      return false;
+    }
+
+    try {
+      const { data } = await saveBook({
+        variables: { bookId },
+      });
+
+      const updatedUser = data.saveBook;
+      setUserData(updatedUser);
+      // upon success, save book's id to localStorage
+      saveBookId(bookId);
     } catch (err) {
       console.error(err);
     }

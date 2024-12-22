@@ -1,5 +1,7 @@
 import express from 'express';
 import path from 'node:path';
+import { ApolloServer } from 'apollo-server-express';
+import { typeDefs, resolvers } from './schemas';
 import db from './config/connection.js';
 import routes from './routes/index.js';
 
@@ -16,6 +18,21 @@ if (process.env.NODE_ENV === 'production') {
 
 app.use(routes);
 
-db.once('open', () => {
-  app.listen(PORT, () => console.log(`🌍 Now listening on localhost:${PORT}`));
-});
+const startApolloServer = async () => {
+  const server = new ApolloServer({
+    typeDefs,
+    resolvers,
+  });
+
+  await server.start();
+  server.applyMiddleware({ app });
+
+  db.once('open', () => {
+    app.listen(PORT, () => {
+      console.log(`🌍 Now listening on localhost:${PORT}`);
+      console.log(`🚀 GraphQL server ready at http://localhost:${PORT}${server.graphqlPath}`);
+    });
+  });
+};
+
+startApolloServer();
