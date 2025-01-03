@@ -1,11 +1,12 @@
-import express from 'express';
+import express, { Application } from 'express';
 import path from 'node:path';
 import { ApolloServer } from 'apollo-server-express';
-import { typeDefs, resolvers } from './schemas';
+import { typeDefs, resolvers } from './schemas/index.js';
 import db from './config/connection.js';
 import routes from './routes/index.js';
 
-const app = express();
+
+const app: Application = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(express.urlencoded({ extended: true }));
@@ -25,7 +26,7 @@ const startApolloServer = async () => {
   });
 
   await server.start();
-  server.applyMiddleware({ app });
+  server.applyMiddleware(app);
 
   db.once('open', () => {
     app.listen(PORT, () => {

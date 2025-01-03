@@ -1,4 +1,5 @@
 import { gql } from 'apollo-server-express';
+import resolvers from './resolvers';
 
 const typeDefs = gql`
     type Book {
@@ -22,3 +23,4 @@ const typeDefs = gql`
 `;
 
 export { typeDefs };
+export { resolvers };
