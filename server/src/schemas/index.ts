@@ -1,26 +1,4 @@
-import { gql } from 'apollo-server-express';
-import resolvers from './resolvers';
+import typeDefs from './typeDefs.js';
+import resolvers from './resolvers.js';
 
-const typeDefs = gql`
-    type Book {
-        id: ID!
-        title: String!
-        author: String!
-        description: String
-        publishedDate: String
-    }
-
-    type Query {
-        books: [Book]
-        book(id: ID!): Book
-    }
-
-    type Mutation {
-        addBook(title: String!, author: String!, description: String, publishedDate: String): Book
-        updateBook(id: ID!, title: String, author: String, description: String, publishedDate: String): Book
-        deleteBook(id: ID!): Book
-    }
-`;
-
-export { typeDefs };
-export { resolvers };
+export { typeDefs, resolvers };

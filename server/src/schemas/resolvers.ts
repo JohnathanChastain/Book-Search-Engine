@@ -1,45 +1,65 @@
-import { IResolvers } from '@graphql-tools/utils';
-import { Book } from '../models/Book';
-import { User } from '../models/User';
+import type IUserContext from '../interfaces/UserContext.js';
+import type IUserDocument from '../interfaces/UserDocument.js';
+import type IBookInput from '../interfaces/BookInput.js';
+import { User } from '../models/index.js';
+import { signToken, AuthenticationError } from '../services/auth-service.js';
 
-const resolvers: IResolvers = {
-    Query: {
-        books: async () => {
-            return await Book.find({});
-        },
-        book: async (_parent: any, { id }: any) => {
-            return await Book.findById(id);
-        },
-        users: async () => {
-            return await User.find();
-        },
-        user: async (_parent: any, { id }: any) => {
-            return await User.findById(id);
-        },
+const resolvers = {
+  Query: {
+    me: async (_parent: any, _args: any, context: IUserContext): Promise<IUserDocument | null> => {
+      
+      if (context.user) {
+
+        const userData = await User.findOne({ _id: context.user._id }).select('-__v -password');
+        return userData;
+      }
+      throw new AuthenticationError('User not authenticated');
     },
-    Mutation: {
-        addBook: async (_parent: any, { title, author }: any) => {
-            const book = new Book({ title, author });
-            return await book.save();
-        },
-        updateBook: async (_parent: any, { id, title, author }: any) => {
-            return await Book.findByIdAndUpdate(id, { title, author }, { new: true });
-        },
-        deleteBook: async (_parent: any, { id }: any) => {
-            return await Book.findByIdAndRemove(id);
-        },
-        addUser: async (_parent: any, { name, email }: any) => {
-            const user = new User({ name, email });
-            return await user.save();
-        },
-        updateUser: async (_parent: any, { id, name, email }: any) => {
-            return await User.findByIdAndUpdate(id, { name, email }, { new: true });
-        },
-        deleteUser: async (_parent: any, { id }: any) => {
-            return await User.findByIdAndRemove(id);
-        },
+  },
+  Mutation: {
+    addUser: async (_parent: any, args: any): Promise<{ token: string; user: IUserDocument }> => {
+      const user = await User.create(args);
+      const token = signToken(user.username, user.email, user._id);
+            
+      return { token, user };
     },
+    login: async (_parent: any, { email, password }: { email: string; password: string }): Promise<{ token: string; user: IUserDocument }> => {
+      const user = await User.findOne({ email });
+
+      if (!user || !(await user.isCorrectPassword(password))) {
+        throw new AuthenticationError('Invalid credentials');
+      }
+
+      const token = signToken(user.username, user.email, user._id);
+      return { token, user };
+    },
+    saveBook: async (_parent: any, { bookData }: { bookData: IBookInput }, context: IUserContext): Promise<IUserDocument | null> => {
+      if (context.user) {
+        const updatedUser = await User.findByIdAndUpdate(
+          { _id: context.user._id },
+          { $push: { savedBooks: bookData } },
+          { new: true }
+        );
+
+        return updatedUser;
+      }
+
+      throw new AuthenticationError('User not authenticated');
+    },
+    removeBook: async (_parent: any, { bookId }: { bookId: string }, context: IUserContext): Promise<IUserDocument | null> => {
+      if (context.user) {
+        const updatedUser = await User.findOneAndUpdate(
+          { _id: context.user._id },
+          { $pull: { savedBooks: { bookId } } },
+          { new: true }
+        );
+
+        return updatedUser;
+      }
+
+      throw new AuthenticationError('User not authenticated');
+    },
+  },
 };
 
 export default resolvers;
-
